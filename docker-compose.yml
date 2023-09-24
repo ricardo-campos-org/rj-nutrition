@@ -1,0 +1,43 @@
+version: '3.9'
+
+services:
+  mysql:
+    container_name: mysql
+    image: mysql:8.1.0
+    environment:
+      MYSQL_ROOT_PASSWORD: secret
+      MYSQL_DATABASE: rj-nutritrion
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-uroot", "-psecret"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 7s
+    ports:
+      - "3306:3306"
+    volumes:
+      - "/mysql"
+
+  rest:
+    container_name: rest
+    image: vegardit/graalvm-maven:latest-java21
+    entrypoint: mvn -ntp spring-boot:run -Dspring-boot.run.jvmArguments="-Xdebug -Xrunjdwp:transport=dt_socket,server=y,suspend=n,address=*:5005"
+    working_dir: /app
+    volumes:
+      - "./rest-api:/app"
+    environment:
+      DATABASE_URL: jdbc:mysql://mysql:3306/rj-nutritrion
+      DATABASE_USER: root
+      DATABASE_PASS: secret
+    ports:
+      - "5005:5005"
+      - "8080:8080"
+    healthcheck:
+      test: "curl --fail --silent http://localhost:8080/actuator/health | grep UP || exit 1"
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 7s
+    depends_on:
+      mysql:
+        condition: service_healthy
