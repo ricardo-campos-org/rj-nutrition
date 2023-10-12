@@ -20,7 +20,7 @@ services:
 
   rest:
     container_name: rest
-    image: vegardit/graalvm-maven:latest-java21
+    image: maven:3.9.4-amazoncorretto-21
     entrypoint: mvn -ntp spring-boot:run -Dspring-boot.run.jvmArguments="-Xdebug -Xrunjdwp:transport=dt_socket,server=y,suspend=n,address=*:5005"
     working_dir: /app
     volumes:
@@ -41,3 +41,21 @@ services:
     depends_on:
       mysql:
         condition: service_healthy
+
+  front:
+    container_name: front
+    image: node:18-bullseye-slim
+    ports:
+      - "3000:3000"
+    entrypoint: sh -c "npm i && npm start"
+    volumes:
+      - "./front:/app"
+    working_dir: /app
+    environment:
+      BROWSER: none
+    healthcheck:
+      test: timeout 10s bash -c 'true > /dev/tcp/127.0.0.1/3000'
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 5s
